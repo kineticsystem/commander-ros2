@@ -17,10 +17,11 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
-
 #include "commander_behaviors/offset_joint_positions.hpp"
 
-#include "commander_behaviors/direction.hpp"
+#include <algorithm>
+#include <iterator>
+#include <vector>
 
 namespace commander_behaviors
 {
@@ -33,8 +34,7 @@ OffsetJointPositions::OffsetJointPositions(const std::string& name, const BT::No
 BT::PortsList OffsetJointPositions::providedPorts()
 {
   return {
-    BT::InputPort<std::string>("direction", "clockwise or counterclockwise"),
-    BT::InputPort<double>("rotation", "rotation amplitude in radians (not negative)"),
+    BT::InputPort<double>("offset", "signed displacement, in radians: it is negative when the motor turns clockwise"),
     BT::InputPort<std::vector<double>>("current_positions", "joint positions the motion starts from"),
     BT::OutputPort<std::vector<double>>("target_positions", "absolute joint positions to reach"),
   };
@@ -42,27 +42,10 @@ BT::PortsList OffsetJointPositions::providedPorts()
 
 BT::NodeStatus OffsetJointPositions::tick()
 {
-  const auto direction_text = getInput<std::string>("direction");
-  if (!direction_text)
+  const auto offset = getInput<double>("offset");
+  if (!offset)
   {
-    throw BT::RuntimeError("OffsetJointPositions: ", direction_text.error());
-  }
-  const auto direction = parseDirection(direction_text.value());
-  if (!direction)
-  {
-    throw BT::RuntimeError("OffsetJointPositions: unknown direction '", direction_text.value(),
-                           "': expected clockwise or counterclockwise");
-  }
-
-  const auto rotation = getInput<double>("rotation");
-  if (!rotation)
-  {
-    throw BT::RuntimeError("OffsetJointPositions: ", rotation.error());
-  }
-  if (rotation.value() < 0.0)
-  {
-    throw BT::RuntimeError("OffsetJointPositions: the rotation must not be negative: "
-                           "use the direction to rotate the other way around");
+    throw BT::RuntimeError("OffsetJointPositions: ", offset.error());
   }
 
   const auto current_positions = getInput<std::vector<double>>("current_positions");
@@ -71,7 +54,12 @@ BT::NodeStatus OffsetJointPositions::tick()
     throw BT::RuntimeError("OffsetJointPositions: ", current_positions.error());
   }
 
-  setOutput("target_positions", rotateBy(current_positions.value(), direction.value(), rotation.value()));
+  std::vector<double> targets;
+  targets.reserve(current_positions.value().size());
+  std::transform(current_positions.value().cbegin(), current_positions.value().cend(), std::back_inserter(targets),
+                 [offset](double position) { return position + offset.value(); });
+
+  setOutput("target_positions", targets);
 
   return BT::NodeStatus::SUCCESS;
 }

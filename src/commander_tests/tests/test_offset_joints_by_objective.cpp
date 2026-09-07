@@ -93,11 +93,9 @@ protected:
   BT::BehaviorTreeFactory factory_;
 };
 
-TEST_F(OffsetJointsByObjective, ClockwiseRotationOfTwoJoints)
+TEST_F(OffsetJointsByObjective, ANegativeOffsetOnTwoJoints)
 {
-  ASSERT_EQ(runObjective(factory_, kObjective,
-                         "{joints: [joint1, joint2], direction: clockwise, "
-                         "rotation: 6.28, duration: 2.0}"),
+  ASSERT_EQ(runObjective(factory_, kObjective, "{joints: [joint1, joint2], offset: -6.28, duration: 2.0}"),
             BT::NodeStatus::SUCCESS);
 
   const auto trajectory = robot_->lastTrajectory();
@@ -107,7 +105,7 @@ TEST_F(OffsetJointsByObjective, ClockwiseRotationOfTwoJoints)
   ASSERT_EQ(trajectory->points.size(), 1u);
   const auto& point = trajectory->points.front();
   ASSERT_EQ(point.positions.size(), 2u);
-  // A clockwise rotation decreases the joint position.
+  // A negative offset decreases the joint position, i.e. turns clockwise.
   EXPECT_DOUBLE_EQ(point.positions[0], 0.5 - 6.28);
   EXPECT_DOUBLE_EQ(point.positions[1], 1.0 - 6.28);
   EXPECT_EQ(point.velocities, (std::vector<double>{ 0.0, 0.0 }));
@@ -115,12 +113,9 @@ TEST_F(OffsetJointsByObjective, ClockwiseRotationOfTwoJoints)
   EXPECT_EQ(point.time_from_start.nanosec, 0u);
 }
 
-TEST_F(OffsetJointsByObjective, CounterClockwiseRotationOfOneJoint)
+TEST_F(OffsetJointsByObjective, APositiveOffsetOnOneJoint)
 {
-  ASSERT_EQ(runObjective(factory_, kObjective,
-                         "{joints: [joint4], direction: counterclockwise, "
-                         "rotation: 1.57}"),
-            BT::NodeStatus::SUCCESS);
+  ASSERT_EQ(runObjective(factory_, kObjective, "{joints: [joint4], offset: 1.57}"), BT::NodeStatus::SUCCESS);
 
   const auto trajectory = robot_->lastTrajectory();
   ASSERT_TRUE(trajectory.has_value());
@@ -136,8 +131,7 @@ TEST_F(OffsetJointsByObjective, CounterClockwiseRotationOfOneJoint)
 // whatever else was driving the robot.
 TEST_F(OffsetJointsByObjective, TheTrajectoryControllerIsActivatedBeforeMoving)
 {
-  ASSERT_EQ(runObjective(factory_, kObjective, "{joints: [joint1], direction: clockwise, rotation: 1.0}"),
-            BT::NodeStatus::SUCCESS);
+  ASSERT_EQ(runObjective(factory_, kObjective, "{joints: [joint1], offset: -1.0}"), BT::NodeStatus::SUCCESS);
 
   EXPECT_EQ(manager_->stateOf("joint_trajectory_controller"), "active");
   EXPECT_EQ(manager_->stateOf("velocity_controller"), "inactive");
@@ -146,8 +140,7 @@ TEST_F(OffsetJointsByObjective, TheTrajectoryControllerIsActivatedBeforeMoving)
 
 TEST_F(OffsetJointsByObjective, AnUnknownJointFailsTheObjective)
 {
-  EXPECT_EQ(runObjective(factory_, kObjective, "{joints: [joint9], direction: clockwise, rotation: 1.0}"),
-            BT::NodeStatus::FAILURE);
+  EXPECT_EQ(runObjective(factory_, kObjective, "{joints: [joint9], offset: -1.0}"), BT::NodeStatus::FAILURE);
   EXPECT_FALSE(robot_->lastTrajectory().has_value());
 }
 
@@ -155,8 +148,7 @@ TEST_F(OffsetJointsByObjective, AControllerErrorFailsTheObjective)
 {
   robot_->failNextTrajectory();
 
-  EXPECT_EQ(runObjective(factory_, kObjective, "{joints: [joint1], direction: clockwise, rotation: 1.0}"),
-            BT::NodeStatus::FAILURE);
+  EXPECT_EQ(runObjective(factory_, kObjective, "{joints: [joint1], offset: -1.0}"), BT::NodeStatus::FAILURE);
   EXPECT_TRUE(robot_->lastTrajectory().has_value());
 }
 

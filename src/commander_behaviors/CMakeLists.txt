@@ -25,7 +25,6 @@ find_package(trajectory_msgs REQUIRED)
 # for instance) can link against it and call commander_behaviors::registerNodes.
 
 add_library(commander_behaviors SHARED
-  src/direction.cpp
   src/follow_joint_trajectory.cpp
   src/get_active_controllers.cpp
   src/get_joint_positions.cpp

@@ -35,13 +35,11 @@ namespace commander_behaviors
  * This node moves nothing: it only turns a relative command into the absolute
  * targets that FollowJointTrajectory then sends to the controller.
  *
- * The displacement is currently expressed the way the StepIt motors are
- * commanded, as a rotation in radians plus a direction, but the node is not
- * bound to rotary joints: a prismatic joint only needs a different pair of
- * ports here, and nothing else in the tree changes.
- *
- * This node contains no ROS code at all: it is the piece of logic that knows
- * the sign convention of the robot, and nothing else.
+ * The displacement carries its own sign, and the sign convention of the robot
+ * is the one of the joint positions themselves: a negative offset decreases the
+ * joint position, which on the StepIt motors means turning clockwise. Nothing
+ * here is bound to rotary joints: on a prismatic joint the very same offset is
+ * a distance.
  */
 class OffsetJointPositions : public BT::SyncActionNode
 {

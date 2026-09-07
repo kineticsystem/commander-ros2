@@ -6,15 +6,15 @@
   have when the objective starts. It is the relative counterpart of
   MoveJointsTo, which sends the joints to absolute positions.
 
-  The offset is currently expressed the way the StepIt motors are commanded,
-  as a rotation in radians plus a direction.
+  The offset carries its own sign: it is negative when the StepIt motors turn
+  clockwise, because a clockwise rotation decreases the joint position.
 
   It is invoked through the commander action server:
 
     ros2 action send_goal /commander/execute_objective \
       btcpp_ros2_interfaces/action/ExecuteTree \
       "{target_tree: OffsetJointsBy,
-        payload: '{joints: [joint1, joint2], direction: clockwise, rotation: 6.28, duration: 5.0}'}"
+        payload: '{joints: [joint1, joint2], offset: -6.28, duration: 5.0}'}"
 
   The payload entries are written by the server into the global blackboard,
   which is why they are referenced below with the '@' prefix.
@@ -38,9 +38,8 @@
         </Delay>
       </RetryUntilSuccessful>
 
-      <!-- Turn the "direction + rotation" command into absolute joint targets. -->
-      <OffsetJointPositions direction="{@direction}"
-                            rotation="{@rotation}"
+      <!-- Turn the commanded offset into absolute joint targets. -->
+      <OffsetJointPositions offset="{@offset}"
                             current_positions="{current_positions}"
                             target_positions="{target_positions}"/>
 

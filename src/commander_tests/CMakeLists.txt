@@ -26,10 +26,6 @@ if(BUILD_TESTING)
   find_package(sensor_msgs REQUIRED)
   find_package(trajectory_msgs REQUIRED)
 
-  # The logic of the behaviors, without any ROS or behavior tree machinery.
-  ament_add_gtest(test_direction tests/test_direction.cpp)
-  target_link_libraries(test_direction commander_behaviors::commander_behaviors)
-
   # The behaviors, ticked inside a behavior tree.
   ament_add_gtest(test_offset_joint_positions tests/test_offset_joint_positions.cpp)
   target_link_libraries(test_offset_joint_positions

@@ -11,7 +11,7 @@ objective and a **payload** holding its parameters to one action:
 ros2 action send_goal /commander/execute_objective \
   btcpp_ros2_interfaces/action/ExecuteTree \
   "{target_tree: OffsetJointsBy,
-    payload: '{joints: [joint1, joint3], direction: clockwise, rotation: 6.28, duration: 4.0}'}"
+    payload: '{joints: [joint1, joint3], offset: -6.28, duration: 4.0}'}"
 ```
 
 The action server itself comes from [BehaviorTree.ROS2](https://github.com/BehaviorTree/BehaviorTree.ROS2)
@@ -57,7 +57,7 @@ The goal of the action is `btcpp_ros2_interfaces/action/ExecuteTree`:
 
 The server parses the payload and writes every parameter into the **global
 blackboard** of the tree, where the behaviors read it through the `@` prefix,
-e.g. `{@rotation}`. A payload that is not a map of scalars and lists is refused,
+e.g. `{@offset}`. A payload that is not a map of scalars and lists is refused,
 and the goal is rejected before the tree is created.
 
 Values are typed as follows, so that the ports of the behaviors read them
@@ -65,9 +65,10 @@ without any further conversion:
 
 | Payload | Blackboard |
 |---|---|
-| `rotation: 6.28` | `double` |
-| `direction: clockwise` | `std::string` |
-| `direction: '5'` (quoted) | `std::string` |
+| `offset: -6.28` | `double` |
+| `duration: 3` | `double` |
+| `controllers: velocity_controller` | `std::string` |
+| `controllers: '5'` (quoted) | `std::string` |
 | `joints: [joint1, joint2]` | `std::vector<std::string>` |
 | `positions: [0.0, 1.5]` | `std::vector<double>` |
 
@@ -81,13 +82,12 @@ position.
 
 | Parameter | Required | Meaning |
 |---|---|---|
-| `joints` | yes | The joints to rotate, e.g. `[joint1, joint3]`. |
-| `direction` | yes | `clockwise` or `counterclockwise` (also `cw`, `ccw`). |
-| `rotation` | yes | The rotation in radians. Never negative: the direction decides the sign. |
+| `joints` | yes | The joints to move, e.g. `[joint1, joint3]`. |
+| `offset` | yes | The signed displacement of each joint, in radians. |
 | `duration` | no | Time to complete the motion, in seconds. Defaults to 5. |
 
 The tree reads the current position of the joints from `/joint_states`, turns
-the rotation into absolute joint targets, and sends them as a single waypoint to
+the offset into absolute joint targets, and sends them as a single waypoint to
 the `FollowJointTrajectory` action of the `joint_trajectory_controller`:
 
 ```
@@ -102,10 +102,12 @@ The objective starts by making sure the trajectory controller is the one
 driving the robot: it cannot send a trajectory otherwise. That first step is the
 `EnsureControllers` subtree, shared with `ActivateController`.
 
-**Sign convention.** A clockwise rotation *decreases* the joint position, as in
-the StepIt README, where `joint1` is rotated 6.28 rad clockwise by commanding the
-position `-6.28`. The convention lives in one function only,
-`commander_behaviors::signedRotation`.
+**Sign convention.** The offset is signed, and its sign is the one of the joint
+positions themselves: a **negative** offset decreases the joint position, which
+on the StepIt motors means turning **clockwise**, as in the StepIt README, where
+`joint1` is rotated 6.28 rad clockwise by commanding the position `-6.28`. There
+is no separate direction parameter: `offset: -6.28` is one turn clockwise,
+`offset: 1.57` a quarter turn counterclockwise.
 
 ## The MoveJointsTo objective
 
@@ -133,7 +135,7 @@ Sequence
 ```
 
 It needs no C++ of its own. The positions are already the targets, so neither
-the current state of the robot nor the sign convention of a rotation come into
+the current state of the robot nor an offset to apply to it come into
 it: `GetJointPositions` and `OffsetJointPositions` are simply not in the tree,
 and the payload goes straight to the controller. Running it twice leaves the
 robot where it was the first time.
@@ -234,7 +236,7 @@ source install/setup.bash
 ros2 action send_goal /commander/execute_objective \
   btcpp_ros2_interfaces/action/ExecuteTree \
   "{target_tree: OffsetJointsBy,
-    payload: '{joints: [joint1, joint3], direction: clockwise, rotation: 6.28, duration: 4.0}'}"
+    payload: '{joints: [joint1, joint3], offset: -6.28, duration: 4.0}'}"
 ```
 
 The running tree can be inspected with [Groot2](https://www.behaviortree.dev/groot),

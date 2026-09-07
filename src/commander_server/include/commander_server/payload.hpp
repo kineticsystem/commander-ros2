@@ -49,7 +49,7 @@ public:
  *
  * The payload is a YAML (and therefore also JSON) map, for example
  *
- *   {joints: [joint1, joint2], direction: clockwise, rotation: 6.28}
+ *   {joints: [joint1, joint2], offset: -6.28}
  *
  * Values are typed as follows, so that the behavior tree ports can read them
  * without any further conversion:
@@ -71,7 +71,7 @@ Payload parsePayload(const std::string& text);
  * @brief Copy the parameters of a command into a blackboard.
  *
  * When the blackboard is the global one, the entries are visible to every tree
- * and subtree through the '@' prefix, e.g. {@rotation}.
+ * and subtree through the '@' prefix, e.g. {@offset}.
  */
 void writeToBlackboard(const Payload& payload, BT::Blackboard& blackboard);
 
