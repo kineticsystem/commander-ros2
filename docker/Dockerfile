@@ -52,6 +52,13 @@ RUN apt-get install -y --no-install-recommends ros-jazzy-ament-cmake-gmock
 RUN apt-get install -y --no-install-recommends ros-jazzy-ament-cmake-gtest
 RUN apt-get install -y --no-install-recommends git python3-vcstool
 
+# Pre-commit hooks: the ament linters they run come from the ROS workspace, so
+# they only work in a shell where /opt/ros/jazzy/setup.bash has been sourced,
+# i.e. in this container. clang-format is the one hook that is not a ROS tool,
+# and Ubuntu 24.04 ships the same major version (18) as the host, so the code
+# is formatted the same way inside and outside the container.
+RUN apt-get install -y --no-install-recommends pre-commit clang-format
+
 # NOTE: the apt python3-websockets crashes on some ROS2 base images -- it
 # still passes the removed `loop=` kwarg to asyncio.Lock() internally.
 # Install a current version from PyPI instead.
