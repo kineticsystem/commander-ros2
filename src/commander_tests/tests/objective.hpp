@@ -34,7 +34,7 @@ namespace commander_tests
 {
 
 /// @brief Path of a tree shipped by commander_objectives, e.g.
-/// treePath("objectives", "rotate_joints.xml").
+/// treePath("objectives", "offset_joints_by.xml").
 inline std::filesystem::path treePath(const std::string& folder, const std::string& file)
 {
   return std::filesystem::path{ ament_index_cpp::get_package_share_directory("commander_objectives") } / folder / file;

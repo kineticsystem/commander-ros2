@@ -1,23 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Objective: RotateJoints
+  Objective: OffsetJointsBy
 
-  Rotates one or more joints by a given angle, in a given direction, relative
-  to the position the joints have when the objective starts.
+  Offsets one or more joints by a given amount, relative to the position they
+  have when the objective starts. It is the relative counterpart of
+  MoveJointsTo, which sends the joints to absolute positions.
+
+  The offset is currently expressed the way the StepIt motors are commanded,
+  as a rotation in radians plus a direction.
 
   It is invoked through the commander action server:
 
     ros2 action send_goal /commander/execute_objective \
       btcpp_ros2_interfaces/action/ExecuteTree \
-      "{target_tree: RotateJoints,
+      "{target_tree: OffsetJointsBy,
         payload: '{joints: [joint1, joint2], direction: clockwise, rotation: 6.28, duration: 5.0}'}"
 
   The payload entries are written by the server into the global blackboard,
   which is why they are referenced below with the '@' prefix.
 -->
-<root BTCPP_format="4" main_tree_to_execute="RotateJoints">
+<root BTCPP_format="4" main_tree_to_execute="OffsetJointsBy">
 
-  <BehaviorTree ID="RotateJoints">
+  <BehaviorTree ID="OffsetJointsBy">
     <Sequence>
 
       <!-- The motion is sent to the trajectory controller, so make sure that

@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
-// End to end test of the RotateJoints objective: it loads the XML shipped by
+// End to end test of the OffsetJointsBy objective: it loads the XML shipped by
 // commander_objectives, registers the real behaviors, and runs the tree against
 // a fake robot. Only the action server itself (which is provided by
 // BehaviorTree.ROS2) is left out.
@@ -43,7 +43,7 @@ namespace
 {
 constexpr auto kJointStateTopic = "/joint_states";
 constexpr auto kActionName = "/joint_trajectory_controller/follow_joint_trajectory";
-constexpr auto kObjective = "RotateJoints";
+constexpr auto kObjective = "OffsetJointsBy";
 
 /// @brief The joints of the StepIt robot, and where they start from.
 const std::vector<std::string> kJointNames{ "joint1", "joint2", "joint3", "joint4", "joint5" };
@@ -51,7 +51,7 @@ const std::vector<double> kJointPositions{ 0.5, 1.0, 0.0, -1.0, 2.0 };
 
 }  // namespace
 
-class RotateJointsObjective : public testing::Test
+class OffsetJointsByObjective : public testing::Test
 {
 protected:
   void SetUp() override
@@ -77,7 +77,7 @@ protected:
 
     commander_behaviors::registerNodes(factory_, params);
     factory_.registerBehaviorTreeFromFile(treePath("subtrees", "ensure_controllers.xml").string());
-    factory_.registerBehaviorTreeFromFile(treePath("objectives", "rotate_joints.xml").string());
+    factory_.registerBehaviorTreeFromFile(treePath("objectives", "offset_joints_by.xml").string());
   }
 
   void TearDown() override
@@ -93,7 +93,7 @@ protected:
   BT::BehaviorTreeFactory factory_;
 };
 
-TEST_F(RotateJointsObjective, ClockwiseRotationOfTwoJoints)
+TEST_F(OffsetJointsByObjective, ClockwiseRotationOfTwoJoints)
 {
   ASSERT_EQ(runObjective(factory_, kObjective,
                          "{joints: [joint1, joint2], direction: clockwise, "
@@ -115,7 +115,7 @@ TEST_F(RotateJointsObjective, ClockwiseRotationOfTwoJoints)
   EXPECT_EQ(point.time_from_start.nanosec, 0u);
 }
 
-TEST_F(RotateJointsObjective, CounterClockwiseRotationOfOneJoint)
+TEST_F(OffsetJointsByObjective, CounterClockwiseRotationOfOneJoint)
 {
   ASSERT_EQ(runObjective(factory_, kObjective,
                          "{joints: [joint4], direction: counterclockwise, "
@@ -134,7 +134,7 @@ TEST_F(RotateJointsObjective, CounterClockwiseRotationOfOneJoint)
 
 // The objective needs the trajectory controller: it activates it, and stops
 // whatever else was driving the robot.
-TEST_F(RotateJointsObjective, TheTrajectoryControllerIsActivatedBeforeMoving)
+TEST_F(OffsetJointsByObjective, TheTrajectoryControllerIsActivatedBeforeMoving)
 {
   ASSERT_EQ(runObjective(factory_, kObjective, "{joints: [joint1], direction: clockwise, rotation: 1.0}"),
             BT::NodeStatus::SUCCESS);
@@ -144,14 +144,14 @@ TEST_F(RotateJointsObjective, TheTrajectoryControllerIsActivatedBeforeMoving)
   EXPECT_EQ(manager_->stateOf("joint_state_broadcaster"), "active");
 }
 
-TEST_F(RotateJointsObjective, AnUnknownJointFailsTheObjective)
+TEST_F(OffsetJointsByObjective, AnUnknownJointFailsTheObjective)
 {
   EXPECT_EQ(runObjective(factory_, kObjective, "{joints: [joint9], direction: clockwise, rotation: 1.0}"),
             BT::NodeStatus::FAILURE);
   EXPECT_FALSE(robot_->lastTrajectory().has_value());
 }
 
-TEST_F(RotateJointsObjective, AControllerErrorFailsTheObjective)
+TEST_F(OffsetJointsByObjective, AControllerErrorFailsTheObjective)
 {
   robot_->failNextTrajectory();
 

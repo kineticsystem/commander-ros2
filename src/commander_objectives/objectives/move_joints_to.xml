@@ -10,7 +10,7 @@
       "{target_tree: MoveJointsTo,
         payload: '{joints: [joint1, joint2], positions: [0.0, 1.57], duration: 3.0}'}"
 
-  This is the absolute counterpart of RotateJoints: the positions are already
+  This is the absolute counterpart of OffsetJointsBy: the positions are already
   the targets, so neither the current state of the robot nor the sign convention
   of a rotation are needed, and the objective goes straight to the controller.
 

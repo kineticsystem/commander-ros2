@@ -10,7 +10,7 @@ objective and a **payload** holding its parameters to one action:
 ```bash
 ros2 action send_goal /commander/execute_objective \
   btcpp_ros2_interfaces/action/ExecuteTree \
-  "{target_tree: RotateJoints,
+  "{target_tree: OffsetJointsBy,
     payload: '{joints: [joint1, joint3], direction: clockwise, rotation: 6.28, duration: 4.0}'}"
 ```
 
@@ -23,7 +23,7 @@ XML file into a package, without touching the server.
 
 - [Packages](#packages)
 - [The command](#the-command)
-- [The RotateJoints objective](#the-rotatejoints-objective)
+- [The OffsetJointsBy objective](#the-offsetjointsby-objective)
 - [The MoveJointsTo objective](#the-movejointsto-objective)
 - [The ActivateController objective](#the-activatecontroller-objective)
 - [Build and run](#build-and-run)
@@ -71,11 +71,13 @@ without any further conversion:
 | `joints: [joint1, joint2]` | `std::vector<std::string>` |
 | `positions: [0.0, 1.5]` | `std::vector<double>` |
 
-## The RotateJoints objective
+## The OffsetJointsBy objective
 
-[`rotate_joints.xml`](src/commander_objectives/objectives/rotate_joints.xml)
-rotates one or more joints, at the same time, **relative** to the position they
-have when the objective starts.
+[`offset_joints_by.xml`](src/commander_objectives/objectives/offset_joints_by.xml)
+offsets one or more joints, at the same time, **relative** to the position they
+have when the objective starts. It is the relative counterpart of
+`MoveJointsTo`: the two names say how they differ, *by* an amount against *to* a
+position.
 
 | Parameter | Required | Meaning |
 |---|---|---|
@@ -108,7 +110,7 @@ position `-6.28`. The convention lives in one function only,
 ## The MoveJointsTo objective
 
 [`move_joints_to.xml`](src/commander_objectives/objectives/move_joints_to.xml) is
-the absolute counterpart of `RotateJoints`: it moves the joints **to** the given
+the absolute counterpart of `OffsetJointsBy`: it moves the joints **to** the given
 positions, whatever position they are in when the objective starts.
 
 | Parameter | Required | Meaning |
@@ -162,7 +164,7 @@ ActivateController                        (the objective: reads the payload)
 The objective itself is only an adapter: it forwards `{@controllers}` from the
 payload into the `EnsureControllers` subtree, which holds the actual work. Any
 objective that needs a given controller calls the same subtree with a fixed
-name, as `RotateJoints` does:
+name, as `OffsetJointsBy` does:
 
 ```xml
 <SubTree ID="EnsureControllers" controllers="joint_trajectory_controller"/>
@@ -231,7 +233,7 @@ clockwise:
 source install/setup.bash
 ros2 action send_goal /commander/execute_objective \
   btcpp_ros2_interfaces/action/ExecuteTree \
-  "{target_tree: RotateJoints,
+  "{target_tree: OffsetJointsBy,
     payload: '{joints: [joint1, joint3], direction: clockwise, rotation: 6.28, duration: 4.0}'}"
 ```
 
@@ -250,7 +252,7 @@ or, for this project alone:
 colcon test --packages-select commander_tests --event-handlers console_direct+
 ```
 
-`test_rotate_joints_objective` runs the real objective XML and the real
+`test_offset_joints_by_objective` runs the real objective XML and the real
 behaviors against a fake robot that publishes `/joint_states` and serves
 `FollowJointTrajectory`, so no hardware and no controller are needed.
 
@@ -265,7 +267,7 @@ behaviors against a fake robot that publishes `/joint_states` and serves
    because the whole package is loaded as one plugin.
 3. Add a test to `src/commander_tests`.
 
-The three objectives shipped here, `RotateJoints`, `MoveJointsTo` and
+The three objectives shipped here, `OffsetJointsBy`, `MoveJointsTo` and
 `ActivateController`, are built from five behaviors and show every shape a
 behavior can take: a ROS action client (`FollowJointTrajectory`), service
 clients (`GetActiveControllers`, `SwitchController`), a subscriber

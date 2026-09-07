@@ -48,9 +48,9 @@ if(BUILD_TESTING)
   target_link_libraries(test_payload commander_server::commander_server)
 
   # The objectives, run end to end against a fake robot.
-  ament_add_gtest(test_rotate_joints_objective tests/test_rotate_joints_objective.cpp)
-  target_include_directories(test_rotate_joints_objective PRIVATE tests)
-  target_link_libraries(test_rotate_joints_objective
+  ament_add_gtest(test_offset_joints_by_objective tests/test_offset_joints_by_objective.cpp)
+  target_include_directories(test_offset_joints_by_objective PRIVATE tests)
+  target_link_libraries(test_offset_joints_by_objective
     ament_index_cpp::ament_index_cpp
     commander_behaviors::commander_behaviors
     commander_server::commander_server
