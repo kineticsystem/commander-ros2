@@ -1,0 +1,18 @@
+# ROS
+build
+install
+log
+.cache
+
+# CMake
+compile_commands.json
+
+# VSCode
+.vscode
+
+# Python
+__pycache__
+*.egg-info
+
+# Local notes, not part of the project.
+task.md

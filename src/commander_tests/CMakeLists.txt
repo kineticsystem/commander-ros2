@@ -1,0 +1,89 @@
+cmake_minimum_required(VERSION 3.16)
+project(commander_tests)
+
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 17)
+  set(CMAKE_CXX_STANDARD_REQUIRED ON)
+endif()
+
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wall -Wextra -Wpedantic -Wshadow -Wconversion)
+endif()
+
+find_package(ament_cmake REQUIRED)
+
+if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+  find_package(ament_index_cpp REQUIRED)
+  find_package(behaviortree_cpp REQUIRED)
+  find_package(behaviortree_ros2 REQUIRED)
+  find_package(commander_behaviors REQUIRED)
+  find_package(commander_server REQUIRED)
+  find_package(control_msgs REQUIRED)
+  find_package(controller_manager_msgs REQUIRED)
+  find_package(rclcpp REQUIRED)
+  find_package(rclcpp_action REQUIRED)
+  find_package(sensor_msgs REQUIRED)
+  find_package(trajectory_msgs REQUIRED)
+
+  # The logic of the behaviors, without any ROS or behavior tree machinery.
+  ament_add_gtest(test_direction tests/test_direction.cpp)
+  target_link_libraries(test_direction commander_behaviors::commander_behaviors)
+
+  # The behaviors, ticked inside a behavior tree.
+  ament_add_gtest(test_offset_joint_positions tests/test_offset_joint_positions.cpp)
+  target_link_libraries(test_offset_joint_positions
+    commander_behaviors::commander_behaviors)
+
+  # Reading a port that holds either a list of names or a single name.
+  ament_add_gtest(test_ports tests/test_ports.cpp)
+  target_link_libraries(test_ports commander_behaviors::commander_behaviors)
+
+  # The strictness of a controller switch.
+  ament_add_gtest(test_switch_controller tests/test_switch_controller.cpp)
+  target_link_libraries(test_switch_controller commander_behaviors::commander_behaviors)
+
+  # The payload of a command.
+  ament_add_gtest(test_payload tests/test_payload.cpp)
+  target_link_libraries(test_payload commander_server::commander_server)
+
+  # The objectives, run end to end against a fake robot.
+  ament_add_gtest(test_rotate_joints_objective tests/test_rotate_joints_objective.cpp)
+  target_include_directories(test_rotate_joints_objective PRIVATE tests)
+  target_link_libraries(test_rotate_joints_objective
+    ament_index_cpp::ament_index_cpp
+    commander_behaviors::commander_behaviors
+    commander_server::commander_server
+    rclcpp::rclcpp
+    rclcpp_action::rclcpp_action
+    ${control_msgs_TARGETS}
+    ${controller_manager_msgs_TARGETS}
+    ${sensor_msgs_TARGETS}
+    ${trajectory_msgs_TARGETS})
+
+  ament_add_gtest(test_move_joints_to_objective
+    tests/test_move_joints_to_objective.cpp)
+  target_include_directories(test_move_joints_to_objective PRIVATE tests)
+  target_link_libraries(test_move_joints_to_objective
+    ament_index_cpp::ament_index_cpp
+    commander_behaviors::commander_behaviors
+    commander_server::commander_server
+    rclcpp::rclcpp
+    rclcpp_action::rclcpp_action
+    ${control_msgs_TARGETS}
+    ${controller_manager_msgs_TARGETS}
+    ${sensor_msgs_TARGETS}
+    ${trajectory_msgs_TARGETS})
+
+  ament_add_gtest(test_activate_controller_objective
+    tests/test_activate_controller_objective.cpp)
+  target_include_directories(test_activate_controller_objective PRIVATE tests)
+  target_link_libraries(test_activate_controller_objective
+    ament_index_cpp::ament_index_cpp
+    commander_behaviors::commander_behaviors
+    commander_server::commander_server
+    rclcpp::rclcpp
+    ${controller_manager_msgs_TARGETS})
+endif()
+
+ament_package()

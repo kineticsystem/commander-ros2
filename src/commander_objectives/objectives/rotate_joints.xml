@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Objective: RotateJoints
+
+  Rotates one or more joints by a given angle, in a given direction, relative
+  to the position the joints have when the objective starts.
+
+  It is invoked through the commander action server:
+
+    ros2 action send_goal /commander/execute_objective \
+      btcpp_ros2_interfaces/action/ExecuteTree \
+      "{target_tree: RotateJoints,
+        payload: '{joints: [joint1, joint2], direction: clockwise, rotation: 6.28, duration: 5.0}'}"
+
+  The payload entries are written by the server into the global blackboard,
+  which is why they are referenced below with the '@' prefix.
+-->
+<root BTCPP_format="4" main_tree_to_execute="RotateJoints">
+
+  <BehaviorTree ID="RotateJoints">
+    <Sequence>
+
+      <!-- The motion is sent to the trajectory controller, so make sure that
+           this is the controller driving the robot, and no other. -->
+      <SubTree ID="EnsureControllers" controllers="joint_trajectory_controller"/>
+
+      <!-- Where are we now? /joint_states is published at 30 Hz, so the very
+           first tick usually finds no message yet: retry a few times. -->
+      <RetryUntilSuccessful num_attempts="10">
+        <Delay delay_msec="200">
+          <GetJointPositions topic_name="/joint_states"
+                             joint_names="{@joints}"
+                             positions="{current_positions}"/>
+        </Delay>
+      </RetryUntilSuccessful>
+
+      <!-- Turn the "direction + rotation" command into absolute joint targets. -->
+      <OffsetJointPositions direction="{@direction}"
+                            rotation="{@rotation}"
+                            current_positions="{current_positions}"
+                            target_positions="{target_positions}"/>
+
+      <!-- Hand the targets over to the trajectory controller. -->
+      <FollowJointTrajectory action_name="/joint_trajectory_controller/follow_joint_trajectory"
+                             joint_names="{@joints}"
+                             positions="{target_positions}"
+                             duration="{@duration}"/>
+
+    </Sequence>
+  </BehaviorTree>
+
+</root>

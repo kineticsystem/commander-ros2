@@ -1,0 +1,53 @@
+// Copyright 2026 kineticsystem
+// SPDX-License-Identifier: MIT
+
+#pragma once
+
+#include <chrono>
+#include <filesystem>
+#include <string>
+#include <thread>
+
+#include <ament_index_cpp/get_package_share_directory.hpp>
+#include <behaviortree_cpp/bt_factory.h>
+#include <commander_server/payload.hpp>
+#include <rclcpp/rclcpp.hpp>
+
+namespace commander_tests
+{
+
+/// @brief Path of a tree shipped by commander_objectives, e.g.
+/// treePath("objectives", "rotate_joints.xml").
+inline std::filesystem::path treePath(const std::string& folder, const std::string& file)
+{
+  return std::filesystem::path{ ament_index_cpp::get_package_share_directory("commander_objectives") } / folder / file;
+}
+
+/**
+ * @brief Run an objective the way the commander server does.
+ *
+ * The payload is parsed and written into the global blackboard, the tree is
+ * created below it, and ticked until it is done.
+ *
+ * @return The status the tree finished with, or RUNNING if it timed out.
+ */
+inline BT::NodeStatus runObjective(BT::BehaviorTreeFactory& factory, const std::string& objective,
+                                   const std::string& payload,
+                                   std::chrono::seconds timeout = std::chrono::seconds{ 20 })
+{
+  auto global_blackboard = BT::Blackboard::create();
+  commander_server::writeToBlackboard(commander_server::parsePayload(payload), *global_blackboard);
+
+  auto tree = factory.createTree(objective, BT::Blackboard::create(global_blackboard));
+
+  const auto deadline = std::chrono::steady_clock::now() + timeout;
+  auto status = BT::NodeStatus::RUNNING;
+  while (status == BT::NodeStatus::RUNNING && rclcpp::ok() && std::chrono::steady_clock::now() < deadline)
+  {
+    status = tree.tickExactlyOnce();
+    std::this_thread::sleep_for(std::chrono::milliseconds{ 10 });
+  }
+  return status;
+}
+
+}  // namespace commander_tests
