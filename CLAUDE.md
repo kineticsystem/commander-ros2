@@ -1,0 +1,91 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Working environment
+
+Everything is built, tested and run **inside the Docker container**, never on the host: the
+ament linters, `colcon` and the ROS 2 Jazzy environment only exist there.
+
+```bash
+./docker/dock.sh commander-ros2 build   # create image + container (also picks up Dockerfile changes)
+./docker/dock.sh commander-ros2 start   # start it and open a shell
+```
+
+The repo is bind-mounted at `~/ws`, so host edits are visible immediately and no rebuild is
+needed for code changes. `~/ws/bin` is on the `PATH` and `docker/bashrc` defines the aliases
+`build`, `test` and `update`, usable from any directory. The scripts `cd` to the workspace
+root themselves.
+
+The submodule must be present or the build fails:
+`git submodule update --init --recursive`.
+
+## Commands
+
+```bash
+update            # ./bin/update.sh -- rosdep install; run once after a dependency changes
+build             # ./bin/build.sh  -- colcon build, Debug, --symlink-install
+test              # ./bin/test.sh   -- colcon test + colcon test-result --all --verbose
+
+# One test target (targets are named after the files in src/commander_tests/tests)
+colcon test --packages-select commander_tests --ctest-args -R test_ports \
+  --event-handlers console_direct+
+
+source install/setup.bash
+ros2 launch commander_server commander.launch.py
+
+ros2 action send_goal /commander/execute_objective \
+  btcpp_ros2_interfaces/action/ExecuteTree \
+  "{target_tree: OffsetJointsBy, payload: '{joints: [joint1], offset: -6.28, duration: 4.0}'}"
+
+pre-commit run -a  # in the container; on the host: SKIP=ament_copyright,ament_lint_cmake,ament_cpplint
+```
+
+A running tree can be inspected with Groot2 on port 1667.
+
+## Architecture
+
+One action server executes *objectives* written as BehaviorTree.CPP XML. The dependency
+direction is the point of the package split and should be preserved:
+
+| Package | Rule |
+|---|---|
+| `commander_objectives` | XML only, no code. Objectives in `objectives/`, reusable pieces in `subtrees/`. |
+| `commander_behaviors` | The **only** place that names robot topics, actions and services. |
+| `commander_server` | Knows nothing about the robot: payload parsing plus `BT::TreeExecutionServer`. |
+| `commander_tests` | All tests; the other packages carry none. |
+
+**Nothing is wired up by hand.** Adding an objective means dropping an XML file into
+`commander_objectives/objectives`, because `commander_server.yaml` lists that folder in
+`behavior_trees` and the server loads whatever it finds. A new behavior needs a line in
+`commander_behaviors::registerNodes` (`src/register_nodes.cpp`) and nothing else: `plugin.cpp`
+exports the whole package as one `BT_PLUGIN_EXPORT` plugin, installed into
+`share/commander_behaviors/bt_plugins`, which the same YAML lists under `plugins`. Tracing why
+a node resolves at runtime means reading those three files together.
+
+**Payload to blackboard.** A goal carries `target_tree` (the `<BehaviorTree>` ID) and `payload`
+(a YAML/JSON map). `parsePayload` types the values — number → `double`, other scalar →
+`std::string`, list of numbers → `std::vector<double>`, other list → `std::vector<std::string>`,
+a quoted scalar always a string — so behavior ports read them with no conversion. They go into
+the **global** blackboard, which is why objectives reference them with the `@` prefix
+(`{@joints}`), while values passed between nodes of one tree have no prefix
+(`{current_positions}`). `CommanderServer::onTreeCreated` unsets the previous goal's keys first;
+a payload that is not a map of scalars and lists is rejected before the tree is created.
+
+**Controller switching** lives in the `EnsureControllers` subtree, which every motion objective
+calls first. It stops only controllers owning a command interface, so broadcasters keep
+running, and it does not use `FORCE_AUTO` strictness: on StepIt each joint exports both a
+position and a velocity interface, so the controller manager would leave both controllers
+active. These are measured constraints, not preferences — see the README before changing them.
+
+**Tests** run the real objective XML and the real behaviors against a fake robot
+(`tests/fake/fake_robot.hpp`, `fake_controller_manager.hpp`), so no hardware and no controller
+manager are needed. New behaviors and objectives are expected to be covered the same way.
+
+## Conventions
+
+- Every source file carries the MIT copyright header (`ament_copyright` enforces it).
+- Packages compile with `-Wall -Wextra -Wpedantic -Wshadow -Wconversion`; C++17.
+- `cpplint` runs with `--linelength=121`; `clang-format` uses the repo `.clang-format`.
+- `README.md` documents each objective's parameters, and `TODO.md` records deferred decisions
+  with the measurements behind them. Update the README when adding or changing an objective.
