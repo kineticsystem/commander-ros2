@@ -16,6 +16,11 @@ function container_exists() {
 # be managed by compose. A container of the same name left over from an older
 # version of this script, or from another project, is not one of ours: compose
 # refuses to reuse the name, so it has to be handled with plain docker.
+function image_exists() {
+    local name="$1"
+    [[ $(docker images -q $name) ]]
+}
+
 function compose_owns_container() {
     local name="$1"
     local project
@@ -96,6 +101,16 @@ case "$command" in
         ;;
     clean)
         docker compose down --rmi local --remove-orphans
+        # A container or an image made before docker-compose.yml existed belongs
+        # to no compose project, so the command above leaves it behind.
+        if container_exists $name; then
+            echo "Removing container '$name', which predates docker-compose.yml"
+            docker rm --force $name > /dev/null
+        fi
+        if image_exists $name:latest; then
+            echo "Removing image: $name:latest"
+            docker rmi $name:latest > /dev/null
+        fi
         ;;
     *)
         echo "Unknown parameter: $command"

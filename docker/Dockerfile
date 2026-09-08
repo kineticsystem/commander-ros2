@@ -64,6 +64,13 @@ RUN apt-get install -y --no-install-recommends pre-commit clang-format
 # Install a current version from PyPI instead.
 RUN pip3 install --no-cache-dir --break-system-packages "websockets>=12"
 
+# The container user is in the sudo group, but a password prompt makes the
+# scripts in ./bin unusable from a non-interactive shell: rosdep shells out to
+# `sudo apt-get`, and sudo refuses to read a password without a terminal. That
+# is what would break `docker exec <container-name> update.sh`.
+RUN echo 'developer ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/developer \
+ && chmod 0440 /etc/sudoers.d/developer
+
 CMD ["bash"]
 
 USER developer
